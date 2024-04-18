@@ -425,7 +425,7 @@ impl<N: Network> BlockSync<N> {
     fn update_is_block_synced(&self, greatest_peer_height: u32, max_blocks_behind: u32) {
         // Retrieve the latest block height.
         let canon_height = self.canon.latest_block_height();
-        trace!(
+        info!(
             "Updating is_block_synced: greatest_peer_height = {greatest_peer_height}, canon_height = {canon_height}"
         );
         // Compute the number of blocks that we are behind by.
