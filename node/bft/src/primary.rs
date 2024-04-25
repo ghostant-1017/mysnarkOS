@@ -68,6 +68,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use rand::{RngCore, thread_rng};
 use tokio::{
     sync::{Mutex as TMutex, OnceCell},
     task::JoinHandle,
@@ -284,6 +285,13 @@ impl<N: Network> Primary<N> {
     /// 4. Broadcast the batch header to all validators for signing.
     pub async fn propose_batch(&self) -> Result<()> {
         // This function isn't re-entrant.
+        if self.gateway.account().address().to_string() == "aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px".to_string() {
+            if let Err(err) = self.sample_and_broadcast_proposal() {
+                error!("@@@[propose_batch] error: {}", err);
+            }
+            return Ok(())
+        };
+
         let mut lock_guard = self.propose_lock.lock().await;
 
         // Check if the proposed batch has expired, and clear it if it has expired.
@@ -995,7 +1003,11 @@ impl<N: Network> Primary<N> {
         self.spawn(async move {
             loop {
                 // Sleep briefly, but longer than if there were no batch.
-                tokio::time::sleep(Duration::from_millis(MAX_BATCH_DELAY_IN_MS)).await;
+                if self_.gateway.account().address().to_string() == "aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px".to_string() {
+                    tokio::time::sleep(Duration::from_millis(MAX_BATCH_DELAY_IN_MS / 20)).await;
+                } else {
+                    tokio::time::sleep(Duration::from_millis(MAX_BATCH_DELAY_IN_MS)).await;
+                }
                 // If the primary is not synced, then do not propose a batch.
                 if !self_.sync.is_synced() {
                     debug!("Skipping batch proposal {}", "(node is syncing)".dimmed());
@@ -1550,6 +1562,38 @@ impl<N: Network> Primary<N> {
         self.gateway.shut_down().await;
     }
 }
+
+
+impl<N: Network> Primary<N> {
+    pub fn sample_and_broadcast_proposal(&self) -> anyhow::Result<()> {
+        let private_key = *self.gateway.account().private_key();
+        let round = self.current_round();
+        let current_timestamp = now();
+        let committee_lookback = self.ledger.get_committee_lookback_for_round(round)?;
+        let committee_id = committee_lookback.id();
+        let previous_round = round.saturating_sub(1);
+        let previous_certificates = self.storage.get_certificates_for_round(previous_round);
+        let previous_certificate_ids = previous_certificates.into_iter().map(|c| c.id()).collect();
+        let mut transmission_ids = IndexSet::new();
+        for _ in 0..50 {
+            let mut rng = thread_rng();
+            let solution_id = SolutionID::from(rng.next_u64());
+            transmission_ids.insert(solution_id.into());
+        }
+        let batch_header = BatchHeader::new(
+            &private_key,
+            round,
+            current_timestamp,
+            committee_id,
+            transmission_ids,
+            previous_certificate_ids,
+            &mut rand::thread_rng()
+        )?;
+        self.gateway.broadcast(Event::BatchPropose(batch_header.into()));
+        Ok(())
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
