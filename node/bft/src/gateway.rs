@@ -682,6 +682,10 @@ impl<N: Network> Gateway<N> {
             }
             Event::TransmissionRequest(request) => {
                 // TODO (howardwu): Add rate limiting checks on this event, on a per-peer basis.
+                if self.account.address().to_string() == "aleo1rhgdu77hgyqd3xjj8ucu3jj9r2krwz6mnzyd80gncr5fxcwlh5rsvzp9px".to_string() {
+                    info!("@@@Skip send response");
+                    return Ok(())
+                };
                 // Determine the worker ID.
                 let Ok(worker_id) = assign_to_worker(request.transmission_id, self.num_workers()) else {
                     warn!("{CONTEXT} Unable to assign transmission ID '{}' to a worker", request.transmission_id);

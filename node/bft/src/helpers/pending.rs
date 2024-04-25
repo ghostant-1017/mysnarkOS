@@ -128,7 +128,7 @@ impl<T: Copy + Clone + PartialEq + Eq + Hash, V: Clone> Pending<T, V> {
 
         // Clear the callbacks that have expired.
         self.clear_expired_callbacks_for_item(item);
-
+        info!("@@@@[pending] current_items after expire: {}", self.pending.read().len());
         // If a callback is provided, insert it into the callback queue.
         if let Some((callback, request_sent)) = callback {
             self.callbacks.lock().entry(item).or_default().push((
