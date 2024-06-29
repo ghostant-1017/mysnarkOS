@@ -13,6 +13,7 @@
 // limitations under the License.
 
 mod router;
+mod attack;
 
 use crate::traits::NodeInterface;
 use snarkos_account::Account;
@@ -50,6 +51,7 @@ use std::{
     sync::{atomic::AtomicBool, Arc},
 };
 use tokio::task::JoinHandle;
+use snarkos_node_sync::locators::BlockLocators;
 
 /// A client node is a full node, capable of querying with the network.
 #[derive(Clone)]
@@ -70,6 +72,8 @@ pub struct Client<N: Network, C: ConsensusStorage<N>> {
     handles: Arc<Mutex<Vec<JoinHandle<()>>>>,
     /// The shutdown signal.
     shutdown: Arc<AtomicBool>,
+
+    pub block_locators: Arc<Mutex<Option<BlockLocators<N>>>>,
 }
 
 impl<N: Network, C: ConsensusStorage<N>> Client<N, C> {
@@ -130,6 +134,7 @@ impl<N: Network, C: ConsensusStorage<N>> Client<N, C> {
             puzzle: ledger.puzzle().clone(),
             handles: Default::default(),
             shutdown,
+            block_locators: Arc::new(Mutex::new(None)),
         };
 
         // Initialize the REST server.
