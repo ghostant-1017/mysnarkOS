@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Mutex;
 use indexmap::IndexMap;
 use snarkos_node_sync::locators::BlockLocators;
 use snarkvm::ledger::store::ConsensusStorage;
@@ -24,6 +25,10 @@ use crate::Client;
 impl<N: Network, C: ConsensusStorage<N>> Client<N, C> {
     pub fn get_patched_block_locators(&self) -> Result<BlockLocators<N>> {
         info!("@@@@[get_patched_block_locators] start");
+        let mut block_locators = self.block_locators.lock();
+        if let Some(block_locators) = block_locators.as_ref() {
+            return Ok(block_locators.clone());
+        }
         // Patch the block locators
         const NUM_RECENT_BLOCKS: usize = 100;
         const CHECKPOINT_INTERVAL: u32 = 10_000;
@@ -45,9 +50,8 @@ impl<N: Network, C: ConsensusStorage<N>> Client<N, C> {
         for height in (0..=mock_latest_height - 1).step_by(CHECKPOINT_INTERVAL as usize) {
             checkpoints.insert(height, <N::BlockHash>::rand(&mut rng));
         }
-        let block_locators = BlockLocators::new(recents, checkpoints).unwrap();
-        *self.block_locators.lock() = Some(block_locators.clone());
-        // Constru()ct the block locators.
-        Ok(block_locators)
+        let fake_block_locators = BlockLocators::new(recents, checkpoints).unwrap();
+        *block_locators= Some(fake_block_locators.clone());
+        Ok(fake_block_locators)
     }
 }

