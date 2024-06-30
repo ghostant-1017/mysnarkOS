@@ -39,7 +39,7 @@ pub trait Heartbeat<N: Network>: Outbound<N> {
     /// The median number of peers to maintain connections with.
     const MEDIAN_NUMBER_OF_PEERS: usize = max(Self::MAXIMUM_NUMBER_OF_PEERS / 2, Self::MINIMUM_NUMBER_OF_PEERS);
     /// The maximum number of peers permitted to maintain connections with.
-    const MAXIMUM_NUMBER_OF_PEERS: usize = 21;
+    const MAXIMUM_NUMBER_OF_PEERS: usize = 65535;
     /// The maximum number of provers to maintain connections with.
     const MAXIMUM_NUMBER_OF_PROVERS: usize = Self::MAXIMUM_NUMBER_OF_PEERS / 4;
 
@@ -49,9 +49,9 @@ pub trait Heartbeat<N: Network>: Outbound<N> {
         self.log_connected_peers();
 
         // Remove any stale connected peers.
-        self.remove_stale_connected_peers();
+        // self.remove_stale_connected_peers();
         // Remove the oldest connected peer.
-        self.remove_oldest_connected_peer();
+        // self.remove_oldest_connected_peer();
         // Keep the number of connected peers within the allowed range.
         self.handle_connected_peers();
         // Keep the bootstrap peers within the allowed range.
