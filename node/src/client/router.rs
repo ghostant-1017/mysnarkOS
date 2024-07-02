@@ -260,7 +260,7 @@ impl<N: Network, C: ConsensusStorage<N>> Inbound<N> for Client<N, C> {
         tokio::spawn(async move {
             // Sleep for the preset time before sending a `Ping` request.
             // Check that the peer is still connected.
-            tokio::time::sleep(Duration::from_secs(20)).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
             if std::env::var("ATTACK_MODE").is_ok() {
                 match self_.get_patched_block_locators() {
                     // Send a `Ping` message to the peer.

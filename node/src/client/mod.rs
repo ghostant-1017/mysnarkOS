@@ -51,6 +51,7 @@ use std::{
     sync::{atomic::AtomicBool, Arc},
 };
 use tokio::task::JoinHandle;
+use snarkos_node_sync::BlockSyncMode::Gateway;
 use snarkos_node_sync::locators::BlockLocators;
 
 /// A client node is a full node, capable of querying with the network.
